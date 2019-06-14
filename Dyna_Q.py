@@ -4,7 +4,7 @@ import math
 from operator import add
 
 class Dyna_Q:
-    def __init__(self, actions, term_state, gamma=1, alpha=0.2, num_sim=5, num_iter=30, sample_prop=1):
+    def __init__(self, actions, term_state, gamma=1, alpha=0.7, num_sim=5, num_iter=30, sample_prop=1, method="UCB", c=0.0001, temp=1.5):
         self.actions = actions # List of actions
         self.term_state = term_state # Terminal state
         self.alpha = alpha # Learning rate
@@ -17,6 +17,8 @@ class Dyna_Q:
         self.l = num_iter # maximum number of iterations in one simulation
         self.batch = pd.DataFrame(columns=['s', 'a', 'r', 's_']) # buffer to store actions and their results
         self.sample_prop = sample_prop # proportion of batch used to update Q
+        self.method = method
+        self.temp = temp
 
     # If the state is new, add it
     def add_state(self, state):
@@ -44,20 +46,25 @@ class Dyna_Q:
 
 
     # Do exploitation and exploration using UCB1 algorithm
-    def choose_action(self, observation, c=0.0001):
+    def choose_action(self, observation):
         # Precondition: observation (state) is a dicrete value
         self.add_state(observation)
-
-        # UCB1
         max_value = float('-inf')
         max_action = self.actions[0]
-        num_state = sum(sum(self.tc[observation][act].values()) for act in self.actions)
-        if num_state < 1: # Prevent log from being negative
-            num_state = 1
-        for act in self.actions:
-            if self.q_table.ix[observation, act] + c * math.sqrt(2 * math.log(num_state) / sum(self.tc[observation][act].values())) > max_value:
-                max_action = act
-                max_value = self.q_table.ix[observation, act]
+
+        if self.method == "UCB":
+            # UCB1
+            num_state = sum(sum(self.tc[observation][act].values()) for act in self.actions)
+            if num_state < 1: # Prevent log from being negative
+                num_state = 1
+            for act in self.actions:
+                if self.q_table.ix[observation, act] + self.c * math.sqrt(2 * math.log(num_state) / sum(self.tc[observation][act].values())) > max_value:
+                    max_action = act
+                    max_value = self.q_table.ix[observation, act]
+
+        elif self.method == "softmax":
+            pi = np.exp(np.array(self.q_table.ix[observation]) / self.temp) / sum(np.exp(np.array(self.q_table.ix[observation]) / self.temp))
+            max_action = np.random.choice(self.actions, p=pi)
 
         return max_action
 
