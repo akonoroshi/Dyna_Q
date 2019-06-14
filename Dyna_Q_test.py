@@ -7,7 +7,7 @@ def main():
     env = gym.make('CartPole-v1')
     actions = np.arange(env.action_space.n)
     term_state = -1
-    agent = Dyna_Q(actions, term_state, num_sim=5, num_iter=30)
+    agent = Dyna_Q(actions, term_state, num_sim=0, num_iter=30, method="softmax")
     interval = 250
     cum_rewards = 0
     high = env.observation_space.high
